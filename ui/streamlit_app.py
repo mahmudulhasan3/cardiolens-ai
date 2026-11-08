@@ -214,6 +214,8 @@ DEFAULTS = {
     "uploader_key": 0,
     "ratings": {},
     "seen_events": {},
+    "pending_question": None,  # NEW: a question that is waiting for its answer
+    "chat_error": None,  # NEW: error text to show after a failed answer
 }
 
 for key, default in DEFAULTS.items():
@@ -243,6 +245,8 @@ def reset_analysis():
     st.session_state.file_key = None
     st.session_state.ratings = {}
     st.session_state.seen_events = {}
+    st.session_state.pending_question = None  # NEW
+    st.session_state.chat_error = None  # NEW
     st.session_state.uploader_key += 1
 
 
@@ -322,6 +326,8 @@ def run_analysis(file, language):
     st.session_state.language = language
     st.session_state.ratings = {}
     st.session_state.seen_events = {}
+    st.session_state.pending_question = None  # NEW
+    st.session_state.chat_error = None  # NEW
 
     ok, first = call_chat(None)
 
@@ -420,27 +426,44 @@ st.warning(
 # -------------------- Sidebar --------------------
 
 with st.sidebar:
-    st.header("⚙️ Settings")
-
-    language = st.selectbox(
-        "Language for the first explanation",
-        ["English", "Bangla"],
-        index=(0 if st.session_state.language == "English" else 1),
+    # 1) App name with the heart emoji, at the very top
+    st.markdown(
+        """
+        <div style="font-size: 25px; font-weight: 800; line-height: 1.2; margin-bottom: 0.5rem;">
+            🫀 CardioLens AI
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.caption("You can ask follow-up questions")
+    # 2) New analysis button, directly under the name
+    if st.button("+ New analysis", use_container_width=True):
+        reset_analysis()  # NEW: clear everything (this was a "pass" before)
+        st.rerun()  # NEW
 
     st.divider()
 
-    if st.button(
-        "＋ New analysis",
-        use_container_width=True,
-    ):
-        reset_analysis()
-        st.rerun()
+    # 3) Settings below the button
+    st.subheader("⚙️ Settings")
+    language = st.selectbox("Language for the first explanation", ["English", "Bangla"])
+    st.caption("You can ask follow-up questions")
 
-    st.caption("CardioLens AI · Project prototype")
-
+    # 4) Footer text, pinned to the bottom of the sidebar
+    st.markdown(
+        """
+        <style>
+        .sidebar-footer {
+            position: fixed;
+            bottom: 1rem;
+            left: 1.5rem;
+            font-size: 0.8rem;
+            opacity: 0.6;
+        }
+        </style>
+        <div class="sidebar-footer">CardioLens AI · Project prototype</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # -------------------- ECG upload --------------------
 
@@ -590,6 +613,7 @@ if st.session_state.session_id and st.session_state.file_key == current_key:
         messages = st.session_state.messages
 
         # Render existing conversation history.
+        # A question that was just sent is already inside this list.
         for idx, msg in enumerate(messages):
             with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
@@ -601,6 +625,14 @@ if st.session_state.session_id and st.session_state.file_key == current_key:
                         idx == len(messages) - 1,
                         uploaded,
                     )
+
+        # NEW: an empty slot right under the history, the "Thinking..." message goes here
+        answer_slot = st.container()
+
+        # NEW: show the error of the last failed answer (only once)
+        if st.session_state.chat_error:
+            st.error(st.session_state.chat_error)
+            st.session_state.chat_error = None
 
         # Suggested questions.
         st.markdown("**Suggested questions**")
@@ -627,16 +659,24 @@ if st.session_state.session_id and st.session_state.file_key == current_key:
 
         question = chosen or typed
 
-        if question:
+        # NEW, STEP 1: a new question arrived -> save it and redraw at once,
+        # so the question is visible before its answer is generated
+        if question and st.session_state.pending_question is None:
             st.session_state.messages.append(
                 {
                     "role": "user",
                     "content": question,
                 }
             )
+            st.session_state.pending_question = question
+            st.rerun()
 
-            with st.spinner("Preparing an answer..."):
-                ok, answer = call_chat(question)
+        # NEW, STEP 2: a question is waiting -> generate its answer now
+        if st.session_state.pending_question is not None:
+            with answer_slot:
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        ok, answer = call_chat(st.session_state.pending_question)
 
             if ok:
                 st.session_state.messages.append(
@@ -645,10 +685,10 @@ if st.session_state.session_id and st.session_state.file_key == current_key:
                         "content": answer,
                     }
                 )
-
-                st.rerun()
-
             else:
-                # Remove the unanswered user turn on API failure.
+                # Remove the unanswered question, so the screen matches the server history
                 st.session_state.messages.pop()
-                st.error(answer)
+                st.session_state.chat_error = answer
+
+            st.session_state.pending_question = None
+            st.rerun()
