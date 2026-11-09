@@ -18,8 +18,7 @@ from src.predict import ECGPredictor
 ROOT = Path(__file__).resolve().parent.parent
 FEEDBACK_PATH = ROOT / "outputs" / "feedback.jsonl"
 
-MAX_FILE_MB = 10
-MIN_WIDTH, MIN_HEIGHT = 800, 500  # tiny images cannot be readable ECGs
+MAX_FILE_MB = 10 # tiny images cannot be readable ECGs
 MAX_SIDE = 10_000  # reject absurdly large images
 ALLOWED_TYPES = {"image/jpeg", "image/png"}
 MAX_SESSIONS = 200  # keep memory bounded
@@ -78,19 +77,32 @@ def predict(
 
     try:
         image = Image.open(io.BytesIO(data))
-        width, height = image.size  # only the header is read here
-    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
-        raise HTTPException(400, "The file is not a valid image.")
+        width, height = image.size
 
-    if width < MIN_WIDTH or height < MIN_HEIGHT:
-        raise HTTPException(422, "Image is too small to be a readable ECG.")
-    if width > MAX_SIDE or height > MAX_SIDE:
-        raise HTTPException(422, "Image dimensions are too large.")
+    # Reject excessively large images
+        if width > MAX_SIDE or height > MAX_SIDE:
+            raise HTTPException(
+                status_code=422,
+                detail="Image dimensions are too large.",
+            )
 
-    try:
-        image.load()  # full decode, catches corrupted files
-    except (OSError, ValueError, SyntaxError):
-        raise HTTPException(400, "The image file is corrupted.")
+    # Decode image and detect corrupted files
+        image.load()
+
+    except HTTPException:
+        raise
+
+    except (
+        UnidentifiedImageError,
+        OSError,
+        Image.DecompressionBombError,
+        ValueError,
+        SyntaxError,
+):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or corrupted image file.",
+    )
 
     # 2) CNN prediction
     result = state["predictor"].predict(image)
