@@ -17,7 +17,7 @@ def read_setting(name, default=""):
         return default
 
 
-API_URL = read_setting("API_URL", "http://127.0.0.1:8000").rstrip("/")
+API_URL = read_setting("API_URL", "https://cardiolens-ai-dxqv.onrender.com").rstrip("/")
 
 st.set_page_config(
     page_title="CardioLens AI",
