@@ -5,7 +5,19 @@ import requests
 import streamlit as st
 import streamlit.components.v1 as components
 
-API_URL = os.getenv("API_URL", "http://127.0.0.1:8000").rstrip("/")
+
+def read_setting(name, default=""):
+    """Read a setting from the environment first, then from Streamlit secrets."""
+    value = os.getenv(name)
+    if value:
+        return value
+    try:
+        return str(st.secrets[name])
+    except Exception:
+        return default
+
+
+API_URL = read_setting("API_URL", "http://127.0.0.1:8000").rstrip("/")
 
 st.set_page_config(
     page_title="CardioLens AI",
@@ -259,7 +271,7 @@ def call_chat(question):
                 "session_id": st.session_state.session_id,
                 "question": question,
             },
-            timeout=60,
+            timeout=120,
         )
 
     except requests.RequestException:
@@ -295,7 +307,7 @@ def run_analysis(file, language):
                 )
             },
             data={"language": language},
-            timeout=60,
+            timeout=120,
         )
 
     except requests.RequestException:

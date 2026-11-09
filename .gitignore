@@ -21,4 +21,4 @@ test_images/
 # Model weights
 models/*.pt
 models/*.pth
-
+!models/resnet18_final.pt
