@@ -10,7 +10,7 @@ A ResNet18 CNN classifies an ECG image into one of four classes. A large languag
 
 ## Live demo
 
-**https://cardiolens-ai-ml.streamlit.app/**
+**https://cardiolens-ai-ml.streamlit.app**
 
 Free hosting can put inactive apps to sleep. If the page asks you to wake the app, confirm and wait a moment.
 
