@@ -1,0 +1,25 @@
+# Secrets and environments
+.env
+.env.*
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Git and editor
+.git/
+.gitignore
+.vscode/
+
+# Not needed in the backend image
+data/
+notebooks/
+outputs/
+ui/
+
+# Docker files and docs
+Dockerfile
+.dockerignore
+*.md
