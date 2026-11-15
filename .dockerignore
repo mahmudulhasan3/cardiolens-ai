@@ -17,7 +17,6 @@ __pycache__/
 data/
 notebooks/
 outputs/
-ui/
 
 # Docker files and docs
 Dockerfile

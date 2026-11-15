@@ -291,6 +291,26 @@ python -m src.predict "path/to/an_ecg_image.jpg"                            # te
 
 Cross-validation metrics are appended to `outputs/cv_results.csv`; delete that file before a fresh run.
 
+## Run with Docker
+
+Requirements: Docker and Docker Compose.
+
+1. Create a `.env` file in the project root with your Gemini API key.
+2. Start both services:
+
+   docker compose up -d --build
+
+3. Open the UI at http://localhost:8501 (API health check: http://localhost:8000/health).
+4. Stop everything:
+
+   docker compose down
+
+Services:
+- `api`: FastAPI backend with the ResNet18 model, healthcheck on `/health`
+- `ui`: Streamlit app, talks to the API at `http://api:8000` (set by `API_URL`)
+
+Feedback is stored in a Docker volume (`feedback_data`), so it survives `docker compose down`.
+
 ## Deployment
 
 The UI reads the backend address from `API_URL`, so the two parts can run on different hosts.
@@ -380,4 +400,4 @@ Dataset: the authors of *ECG Images dataset of Cardiac Patients* (Mendeley Data)
 
 CardioLens AI is a student project for learning and demonstration. It must not be used to make medical decisions. If you have symptoms such as chest pain, shortness of breath or fainting, seek emergency medical care.
 
-Built by [@mahmudulhasan3](https://github.com/mahmudulhasan3).
+Built by [@mahmudulhasan03](https://www.linkedin.com/in/mahmudulhasan03).

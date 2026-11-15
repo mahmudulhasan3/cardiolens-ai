@@ -1,20 +1,22 @@
-FROM python:3.12.3
+FROM python:3.12-slim
 
 WORKDIR /code
 
 # Install CPU-only PyTorch first (much smaller than the CUDA build)
 RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-# Copy requirements first so Docker can cache this layer
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Dependencies change rarely, so copy them first to keep this layer cached
+COPY requirements-api.txt .
+RUN pip install --no-cache-dir -r requirements-api.txt
 
-# Copy backend code and model files
-COPY app ./app
-COPY src ./src
+# Model files change rarely, so copy them before the code
 COPY models ./models
 
-# The app may write feedback here, but outputs/ is ignored
+# Code changes often, so copy it last
+COPY src ./src
+COPY app ./app
+
+# The app writes feedback here
 RUN mkdir -p outputs
 
 # Non-secret default only. The API key is passed at run time
